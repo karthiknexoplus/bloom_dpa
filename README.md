@@ -1,6 +1,6 @@
 # Flask Weighment Receiver
 
-This project exposes an endpoint to receive weighment payloads from an external source and displays all received data on a web page.
+This project exposes an endpoint to receive weighment payloads from an external source, stores every record in SQLite, and displays all data on a styled dashboard.
 
 ## API Endpoint
 
@@ -35,7 +35,24 @@ Expected payload:
 3. Start server:
    - `python app.py`
 4. Open dashboard:
-   - `http://localhost:5000`
+   - `http://localhost:5000/login`
+
+## Authentication
+
+- Login URL: `http://localhost:5000/login`
+- Default credentials:
+  - Username: `admin`
+  - Password: `admin123`
+- Override with env vars:
+  - `APP_USER`
+  - `APP_PASSWORD`
+  - `FLASK_SECRET_KEY`
+
+## Database
+
+- SQLite file: `weighment.db`
+- Table: `weighments`
+- Every successful `POST /api/weighment` is inserted into this table.
 
 ## Test With cURL
 

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - {{ app_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}" />
+  </head>
+  <body class="login-body">
+    <div class="split-container">
+      <div class="left-panel">
+        <div class="left-overlay"></div>
+        <div class="left-content">
+          <div class="logo-container">B</div>
+          <h1 class="app-title">{{ app_title }}</h1>
+          <p class="welcome-message">Weighment integration gateway</p>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div class="glass-card">
+          <h3 class="login-heading">Welcome Back</h3>
+          <p class="login-subtext">Login to continue</p>
+          {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+          {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+          {% endif %}
+          {% endwith %}
+          <form method="POST" class="login-form">
+            <label>Username</label>
+            <input type="text" name="username" placeholder="Username" required />
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Password" required />
+            <button type="submit" class="gradient-btn">Login</button>
+          </form>
+          <p class="hint-text">Default: admin / admin123</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

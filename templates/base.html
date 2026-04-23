@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}{{ app_title }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}" />
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    {% if session.get("logged_in") %}
+    <header class="navbar-custom">
+      <div class="brand">{{ app_title }}</div>
+      <nav class="menu">
+        <a class="nav-icon-link" href="{{ url_for('index') }}">
+          <span class="fastag-menu-label">Dashboard</span>
+        </a>
+        <a class="nav-icon-link" href="#api-help">
+          <span class="fastag-menu-label">API</span>
+        </a>
+        <a class="nav-icon-link" href="{{ url_for('logout') }}">
+          <span class="fastag-menu-label">Logout</span>
+        </a>
+      </nav>
+    </header>
+    {% endif %}
+    <main class="page-wrapper">{% block content %}{% endblock %}</main>
+  </body>
+</html>

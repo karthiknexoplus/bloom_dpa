@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ app_title }}{% endblock %}
+
+{% block content %}
+<section class="container">
+  <div class="welcome-banner">
+    <div>
+      <h2>Incoming Weighment Listing</h2>
+      <p>All records received via external POST payloads are stored in SQLite.</p>
+    </div>
+  </div>
+
+  <div class="quick-grid">
+    <a class="quick-action-card" href="{{ url_for('index') }}">
+      <div class="quick-action-title">Total Records</div>
+      <div class="quick-action-value">{{ records|length }}</div>
+    </a>
+    <a class="quick-action-card" href="#api-help">
+      <div class="quick-action-title">Endpoint</div>
+      <div class="quick-action-value">/api/weighment</div>
+    </a>
+  </div>
+
+  <div class="card-table">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>CHA Agent</th>
+          <th>Material</th>
+          <th>Importer</th>
+          <th>Vessel</th>
+          <th>Vehicle</th>
+          <th>Tare</th>
+          <th>Gross</th>
+          <th>Net</th>
+          <th>Weighment Date</th>
+          <th>Received At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if records %}
+        {% for row in records %}
+        <tr>
+          <td>{{ row.id }}</td>
+          <td>{{ row.cha_agent_name }}</td>
+          <td>{{ row.material_name }}</td>
+          <td>{{ row.importer_name }}</td>
+          <td>{{ row.vessel_no }}</td>
+          <td>{{ row.vehicle_no }}</td>
+          <td>{{ row.tare_weight }}</td>
+          <td>{{ row.gross_weight }}</td>
+          <td>{{ row.net_weight }}</td>
+          <td>{{ row.weighment_datetime }}</td>
+          <td>{{ row.received_at }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="11" class="empty-row">No data received yet.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="api-note" id="api-help">
+    <strong>POST endpoint:</strong> <code>/api/weighment</code>
+  </div>
+</section>
+{% endblock %}
