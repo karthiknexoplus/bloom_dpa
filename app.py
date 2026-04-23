@@ -5,7 +5,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List
 
-from flask import Flask, flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_file, session, url_for
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "change-me-in-production")
@@ -13,6 +13,7 @@ app.config["DATABASE"] = str(Path(__file__).resolve().parent / "weighment.db")
 app.config["APP_TITLE"] = "Bloom Weighment"
 app.config["APP_USER"] = os.getenv("APP_USER", "admin")
 app.config["APP_PASSWORD"] = os.getenv("APP_PASSWORD", "admin123")
+app.config["LOGIN_BG_PATH"] = str(Path(__file__).resolve().parent / "csm_harbour-intercom-header_188d0b7581.png")
 
 REQUIRED_FIELDS = [
     "cha_agent_name",
@@ -50,6 +51,21 @@ def init_db() -> None:
             net_weight REAL NOT NULL,
             weighment_datetime TEXT NOT NULL,
             received_at TEXT NOT NULL
+        )
+        """
+    )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS incoming_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            endpoint TEXT NOT NULL,
+            method TEXT NOT NULL,
+            remote_addr TEXT,
+            user_agent TEXT,
+            payload_raw TEXT,
+            status TEXT NOT NULL,
+            error_message TEXT,
+            created_at TEXT NOT NULL
         )
         """
     )
@@ -93,6 +109,21 @@ def index():
     return render_template("dashboard.html", records=rows, app_title=app.config["APP_TITLE"])
 
 
+@app.route("/incoming-requests", methods=["GET"])
+@login_required
+def incoming_requests():
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT id, endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at
+        FROM incoming_requests
+        ORDER BY id DESC
+        LIMIT 500
+        """
+    ).fetchall()
+    return render_template("incoming_requests.html", records=rows, app_title=app.config["APP_TITLE"])
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -112,14 +143,58 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/login-background", methods=["GET"])
+def login_background():
+    bg_path = Path(app.config["LOGIN_BG_PATH"])
+    if not bg_path.exists():
+        return ("Background image not found", 404)
+    return send_file(bg_path)
+
+
 @app.route("/api/weighment", methods=["POST"])
 def receive_weighment():
+    db = get_db()
+    payload_raw = request.get_data(cache=True, as_text=True) or ""
     payload = request.get_json(silent=True)
     if not payload:
+        db.execute(
+            """
+            INSERT INTO incoming_requests (endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                request.path,
+                request.method,
+                request.remote_addr,
+                request.user_agent.string if request.user_agent else "",
+                payload_raw,
+                "invalid_json",
+                "Invalid or missing JSON payload",
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        db.commit()
         return jsonify({"error": "Invalid or missing JSON payload"}), 400
 
     missing_fields = [field for field in REQUIRED_FIELDS if field not in payload]
     if missing_fields:
+        db.execute(
+            """
+            INSERT INTO incoming_requests (endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                request.path,
+                request.method,
+                request.remote_addr,
+                request.user_agent.string if request.user_agent else "",
+                payload_raw,
+                "missing_fields",
+                "Missing required fields: " + ",".join(missing_fields),
+                datetime.utcnow().isoformat() + "Z",
+            ),
+        )
+        db.commit()
         return (
             jsonify(
                 {
@@ -132,7 +207,6 @@ def receive_weighment():
 
     record = {field: payload.get(field) for field in REQUIRED_FIELDS}
     record["received_at"] = datetime.utcnow().isoformat() + "Z"
-    db = get_db()
     db.execute(
         """
         INSERT INTO weighments (
@@ -151,6 +225,22 @@ def receive_weighment():
             record["net_weight"],
             record["weighment_datetime"],
             record["received_at"],
+        ),
+    )
+    db.execute(
+        """
+        INSERT INTO incoming_requests (endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            request.path,
+            request.method,
+            request.remote_addr,
+            request.user_agent.string if request.user_agent else "",
+            payload_raw,
+            "success",
+            "",
+            datetime.utcnow().isoformat() + "Z",
         ),
     )
     db.commit()

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Incoming Data - {{ app_title }}{% endblock %}
+
+{% block content %}
+<section class="container">
+  <div class="welcome-banner">
+    <div>
+      <h2>Incoming Request Audit Trail</h2>
+      <p>Latest inbound API calls with timestamp, status, and raw payload.</p>
+    </div>
+  </div>
+
+  <div class="card-table">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Timestamp</th>
+          <th>Endpoint</th>
+          <th>Method</th>
+          <th>Status</th>
+          <th>Source IP</th>
+          <th>Error</th>
+          <th>Payload</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if records %}
+        {% for row in records %}
+        <tr>
+          <td>{{ row.id }}</td>
+          <td>{{ row.created_at }}</td>
+          <td>{{ row.endpoint }}</td>
+          <td>{{ row.method }}</td>
+          <td>{{ row.status }}</td>
+          <td>{{ row.remote_addr }}</td>
+          <td>{{ row.error_message or "-" }}</td>
+          <td class="payload-cell">{{ row.payload_raw }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="8" class="empty-row">No incoming requests logged yet.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

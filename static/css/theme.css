@@ -133,6 +133,7 @@ td {
   border-bottom: 1px solid var(--theme-border-color);
   text-align: left;
   font-size: 0.82rem;
+  vertical-align: top;
 }
 
 th {
@@ -143,6 +144,14 @@ th {
 .empty-row {
   text-align: center;
   color: var(--theme-text-secondary);
+}
+
+.payload-cell {
+  max-width: 420px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;
 }
 
 .api-note {
@@ -171,7 +180,7 @@ code {
 
 .left-panel {
   flex: 1.2;
-  background: linear-gradient(135deg, #764ba2 0%, #4b2e83 100%);
+  background: url("/login-background") center center/cover no-repeat;
   position: relative;
   display: flex;
   align-items: center;
@@ -181,7 +190,7 @@ code {
 .left-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(40, 20, 80, 0.38);
+  background: rgba(40, 20, 80, 0.52);
 }
 
 .left-content {

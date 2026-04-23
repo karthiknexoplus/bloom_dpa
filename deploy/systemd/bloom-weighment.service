@@ -1,0 +1,18 @@
+[Unit]
+Description=Bloom Weighment Flask Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/bloom_dpa
+EnvironmentFile=/opt/bloom_dpa/deploy/systemd/bloom-weighment.env
+ExecStart=/usr/bin/python3 /opt/bloom_dpa/app.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/bloom_dpa/app.log
+StandardError=append:/var/log/bloom_dpa/error.log
+
+[Install]
+WantedBy=multi-user.target
