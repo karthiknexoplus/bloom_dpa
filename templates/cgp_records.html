@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}CGP Data - {{ app_title }}{% endblock %}
+
+{% block content %}
+<section class="container">
+  <div class="welcome-banner">
+    <div>
+      <h2>CGP Incoming Data</h2>
+      <p>Records received from external endpoint <code>/ebs/cgp</code>.</p>
+    </div>
+  </div>
+
+  <div class="card-table">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Received At</th>
+          <th>CGP No</th>
+          <th>Vehicle No</th>
+          <th>Status</th>
+          <th>Operation</th>
+          <th>Requesting Party</th>
+          <th>Approved Date</th>
+          <th>Raw Payload</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if records %}
+        {% for row in records %}
+        <tr>
+          <td>{{ row.id }}</td>
+          <td>{{ row.received_at }}</td>
+          <td>{{ row.cgp_no or "-" }}</td>
+          <td>{{ row.vehicle_regd_no or "-" }}</td>
+          <td>{{ row.status_name or "-" }}</td>
+          <td>{{ row.operation_type or "-" }}</td>
+          <td>{{ row.requesting_party_name or "-" }}</td>
+          <td>{{ row.cgp_approved_dt or "-" }}</td>
+          <td class="payload-cell">{{ row.payload_raw }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="9" class="empty-row">No CGP data received yet.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

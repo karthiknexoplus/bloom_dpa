@@ -28,6 +28,30 @@ REQUIRED_FIELDS = [
 ]
 
 
+def log_incoming_request(
+    db: sqlite3.Connection,
+    status: str,
+    payload_raw: str,
+    error_message: str = "",
+) -> None:
+    db.execute(
+        """
+        INSERT INTO incoming_requests (endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            request.path,
+            request.method,
+            request.remote_addr,
+            request.user_agent.string if request.user_agent else "",
+            payload_raw,
+            status,
+            error_message,
+            datetime.utcnow().isoformat() + "Z",
+        ),
+    )
+
+
 def get_db() -> sqlite3.Connection:
     if "db" not in g:
         g.db = sqlite3.connect(app.config["DATABASE"])
@@ -66,6 +90,21 @@ def init_db() -> None:
             status TEXT NOT NULL,
             error_message TEXT,
             created_at TEXT NOT NULL
+        )
+        """
+    )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS cgp_receipts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cgp_no TEXT,
+            vehicle_regd_no TEXT,
+            status_name TEXT,
+            operation_type TEXT,
+            requesting_party_name TEXT,
+            cgp_approved_dt TEXT,
+            payload_raw TEXT NOT NULL,
+            received_at TEXT NOT NULL
         )
         """
     )
@@ -124,6 +163,22 @@ def incoming_requests():
     return render_template("incoming_requests.html", records=rows, app_title=app.config["APP_TITLE"])
 
 
+@app.route("/cgp-records", methods=["GET"])
+@login_required
+def cgp_records():
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT id, cgp_no, vehicle_regd_no, status_name, operation_type, requesting_party_name,
+               cgp_approved_dt, payload_raw, received_at
+        FROM cgp_receipts
+        ORDER BY id DESC
+        LIMIT 500
+        """
+    ).fetchall()
+    return render_template("cgp_records.html", records=rows, app_title=app.config["APP_TITLE"])
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -157,42 +212,17 @@ def receive_weighment():
     payload_raw = request.get_data(cache=True, as_text=True) or ""
     payload = request.get_json(silent=True)
     if not payload:
-        db.execute(
-            """
-            INSERT INTO incoming_requests (endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                request.path,
-                request.method,
-                request.remote_addr,
-                request.user_agent.string if request.user_agent else "",
-                payload_raw,
-                "invalid_json",
-                "Invalid or missing JSON payload",
-                datetime.utcnow().isoformat() + "Z",
-            ),
-        )
+        log_incoming_request(db, "invalid_json", payload_raw, "Invalid or missing JSON payload")
         db.commit()
         return jsonify({"error": "Invalid or missing JSON payload"}), 400
 
     missing_fields = [field for field in REQUIRED_FIELDS if field not in payload]
     if missing_fields:
-        db.execute(
-            """
-            INSERT INTO incoming_requests (endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                request.path,
-                request.method,
-                request.remote_addr,
-                request.user_agent.string if request.user_agent else "",
-                payload_raw,
-                "missing_fields",
-                "Missing required fields: " + ",".join(missing_fields),
-                datetime.utcnow().isoformat() + "Z",
-            ),
+        log_incoming_request(
+            db,
+            "missing_fields",
+            payload_raw,
+            "Missing required fields: " + ",".join(missing_fields),
         )
         db.commit()
         return (
@@ -227,25 +257,51 @@ def receive_weighment():
             record["received_at"],
         ),
     )
-    db.execute(
-        """
-        INSERT INTO incoming_requests (endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            request.path,
-            request.method,
-            request.remote_addr,
-            request.user_agent.string if request.user_agent else "",
-            payload_raw,
-            "success",
-            "",
-            datetime.utcnow().isoformat() + "Z",
-        ),
-    )
+    log_incoming_request(db, "success", payload_raw)
     db.commit()
 
     return jsonify({"message": "Payload received successfully", "record": record}), 201
+
+
+@app.route("/ebs/cgp", methods=["POST"])
+def receive_cgp():
+    db = get_db()
+    payload_raw = request.get_data(cache=True, as_text=True) or ""
+    payload = request.get_json(silent=True)
+    if not payload:
+        log_incoming_request(db, "invalid_json", payload_raw, "Invalid or missing JSON payload")
+        db.commit()
+        return jsonify({"error": "Invalid or missing JSON payload"}), 400
+
+    cgp_details = payload.get("CGPDetails")
+    if not isinstance(cgp_details, dict):
+        log_incoming_request(db, "missing_cgpdetails", payload_raw, "CGPDetails object is required")
+        db.commit()
+        return jsonify({"error": "CGPDetails object is required"}), 400
+
+    received_at = datetime.utcnow().isoformat() + "Z"
+    db.execute(
+        """
+        INSERT INTO cgp_receipts (
+            cgp_no, vehicle_regd_no, status_name, operation_type, requesting_party_name,
+            cgp_approved_dt, payload_raw, received_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            cgp_details.get("CGPNo"),
+            cgp_details.get("VehicleRegdNo"),
+            cgp_details.get("StatusName"),
+            cgp_details.get("OperationType"),
+            cgp_details.get("RequestingPartyName"),
+            cgp_details.get("CGPApprovedDT"),
+            payload_raw,
+            received_at,
+        ),
+    )
+    log_incoming_request(db, "success", payload_raw)
+    db.commit()
+
+    return jsonify({"message": "CGP payload received successfully", "received_at": received_at}), 201
 
 
 if __name__ == "__main__":
