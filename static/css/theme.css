@@ -121,6 +121,82 @@ body {
   overflow-x: auto;
 }
 
+.filters-bar {
+  display: flex;
+  gap: 0.65rem;
+  align-items: end;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--theme-border-color);
+  border-radius: 12px;
+  padding: 0.7rem;
+  margin-bottom: 0.8rem;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 140px;
+}
+
+.filter-field.wide {
+  min-width: 260px;
+}
+
+.filter-field label {
+  font-size: 0.76rem;
+  color: var(--theme-text-secondary);
+}
+
+.filter-field input,
+.filter-field select {
+  border: 1px solid var(--theme-border-color);
+  border-radius: 8px;
+  padding: 0.48rem 0.55rem;
+  font-size: 0.82rem;
+}
+
+.btn-filter,
+.btn-clear,
+.btn-page {
+  text-decoration: none;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-filter,
+.btn-page {
+  background: var(--theme-primary);
+  color: #fff;
+}
+
+.btn-clear {
+  background: #eef1f6;
+  color: #3b4451;
+}
+
+.pagination-bar {
+  margin-top: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.pagination-meta {
+  font-size: 0.82rem;
+  color: var(--theme-text-secondary);
+}
+
+.pagination-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

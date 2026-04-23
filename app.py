@@ -4,6 +4,7 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List
+from urllib.parse import urlencode
 
 from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_file, session, url_for
 
@@ -121,6 +122,42 @@ def login_required(view):
     return wrapped_view
 
 
+def parse_pagination() -> tuple[int, int]:
+    page = request.args.get("page", default=1, type=int) or 1
+    per_page = request.args.get("per_page", default=25, type=int) or 25
+    if page < 1:
+        page = 1
+    if per_page < 1:
+        per_page = 25
+    if per_page > 100:
+        per_page = 100
+    return page, per_page
+
+
+def date_range_filters(from_date: str, to_date: str, column_name: str) -> tuple[List[str], List[Any]]:
+    clauses: List[str] = []
+    params: List[Any] = []
+    if from_date:
+        clauses.append(f"{column_name} >= ?")
+        params.append(f"{from_date}T00:00:00Z")
+    if to_date:
+        clauses.append(f"{column_name} <= ?")
+        params.append(f"{to_date}T23:59:59.999999Z")
+    return clauses, params
+
+
+def pagination_links(base_endpoint: str, page: int, total_pages: int, params: Dict[str, Any]) -> Dict[str, str | None]:
+    def build_url(target_page: int) -> str:
+        q = dict(params)
+        q["page"] = target_page
+        return f"{url_for(base_endpoint)}?{urlencode(q)}"
+
+    return {
+        "prev": build_url(page - 1) if page > 1 else None,
+        "next": build_url(page + 1) if page < total_pages else None,
+    }
+
+
 @app.before_request
 def before_request() -> None:
     init_db()
@@ -152,31 +189,112 @@ def index():
 @login_required
 def incoming_requests():
     db = get_db()
+    page, per_page = parse_pagination()
+    from_date = (request.args.get("from_date") or "").strip()
+    to_date = (request.args.get("to_date") or "").strip()
+    status = (request.args.get("status") or "").strip()
+
+    clauses, params = date_range_filters(from_date, to_date, "created_at")
+    if status:
+        clauses.append("status = ?")
+        params.append(status)
+
+    where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    total = db.execute(
+        f"SELECT COUNT(*) FROM incoming_requests {where_clause}",
+        tuple(params),
+    ).fetchone()[0]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+    offset = (page - 1) * per_page
+
     rows = db.execute(
-        """
+        f"""
         SELECT id, endpoint, method, remote_addr, user_agent, payload_raw, status, error_message, created_at
         FROM incoming_requests
+        {where_clause}
         ORDER BY id DESC
-        LIMIT 500
-        """
+        LIMIT ? OFFSET ?
+        """,
+        (*params, per_page, offset),
     ).fetchall()
-    return render_template("incoming_requests.html", records=rows, app_title=app.config["APP_TITLE"])
+    query_params = {
+        "from_date": from_date,
+        "to_date": to_date,
+        "status": status,
+        "per_page": per_page,
+    }
+    links = pagination_links("incoming_requests", page, total_pages, query_params)
+    return render_template(
+        "incoming_requests.html",
+        records=rows,
+        app_title=app.config["APP_TITLE"],
+        filters=query_params,
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
+        prev_url=links["prev"],
+        next_url=links["next"],
+    )
 
 
 @app.route("/cgp-records", methods=["GET"])
 @login_required
 def cgp_records():
     db = get_db()
+    page, per_page = parse_pagination()
+    from_date = (request.args.get("from_date") or "").strip()
+    to_date = (request.args.get("to_date") or "").strip()
+    search = (request.args.get("search") or "").strip()
+
+    clauses, params = date_range_filters(from_date, to_date, "received_at")
+    if search:
+        clauses.append("(cgp_no LIKE ? OR vehicle_regd_no LIKE ? OR requesting_party_name LIKE ?)")
+        like = f"%{search}%"
+        params.extend([like, like, like])
+
+    where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    total = db.execute(
+        f"SELECT COUNT(*) FROM cgp_receipts {where_clause}",
+        tuple(params),
+    ).fetchone()[0]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+    offset = (page - 1) * per_page
+
     rows = db.execute(
-        """
+        f"""
         SELECT id, cgp_no, vehicle_regd_no, status_name, operation_type, requesting_party_name,
                cgp_approved_dt, payload_raw, received_at
         FROM cgp_receipts
+        {where_clause}
         ORDER BY id DESC
-        LIMIT 500
-        """
+        LIMIT ? OFFSET ?
+        """,
+        (*params, per_page, offset),
     ).fetchall()
-    return render_template("cgp_records.html", records=rows, app_title=app.config["APP_TITLE"])
+    query_params = {
+        "from_date": from_date,
+        "to_date": to_date,
+        "search": search,
+        "per_page": per_page,
+    }
+    links = pagination_links("cgp_records", page, total_pages, query_params)
+    return render_template(
+        "cgp_records.html",
+        records=rows,
+        app_title=app.config["APP_TITLE"],
+        filters=query_params,
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
+        prev_url=links["prev"],
+        next_url=links["next"],
+    )
 
 
 @app.route("/login", methods=["GET", "POST"])

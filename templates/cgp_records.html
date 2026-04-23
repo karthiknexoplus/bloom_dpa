@@ -11,6 +11,37 @@
     </div>
   </div>
 
+  <form class="filters-bar" method="GET" action="{{ url_for('cgp_records') }}">
+    <div class="filter-field">
+      <label>From</label>
+      <input type="date" name="from_date" value="{{ filters.from_date }}" />
+    </div>
+    <div class="filter-field">
+      <label>To</label>
+      <input type="date" name="to_date" value="{{ filters.to_date }}" />
+    </div>
+    <div class="filter-field wide">
+      <label>Search</label>
+      <input
+        type="text"
+        name="search"
+        value="{{ filters.search }}"
+        placeholder="CGP No / Vehicle / Party"
+      />
+    </div>
+    <div class="filter-field">
+      <label>Per Page</label>
+      <select name="per_page">
+        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-filter">Apply</button>
+    <a class="btn-clear" href="{{ url_for('cgp_records') }}">Clear</a>
+  </form>
+
   <div class="card-table">
     <table>
       <thead>
@@ -48,6 +79,18 @@
         {% endif %}
       </tbody>
     </table>
+  </div>
+
+  <div class="pagination-bar">
+    <div class="pagination-meta">Showing page {{ page }} of {{ total_pages }} (Total: {{ total }})</div>
+    <div class="pagination-actions">
+      {% if prev_url %}
+      <a class="btn-page" href="{{ prev_url }}">Previous</a>
+      {% endif %}
+      {% if next_url %}
+      <a class="btn-page" href="{{ next_url }}">Next</a>
+      {% endif %}
+    </div>
   </div>
 </section>
 {% endblock %}
