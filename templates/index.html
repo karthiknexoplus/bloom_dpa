@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weighment Dashboard</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f9fc;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --accent: #2563eb;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111827;
+          --card: #1f2937;
+          --text: #f9fafb;
+          --muted: #9ca3af;
+          --border: #374151;
+          --accent: #60a5fa;
+        }
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 1080px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+
+      .header {
+        margin-bottom: 1.5rem;
+      }
+
+      .header h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.8rem;
+      }
+
+      .header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        font-size: 0.92rem;
+        vertical-align: top;
+      }
+
+      th {
+        background: rgba(37, 99, 235, 0.08);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      .empty {
+        padding: 1.5rem;
+        color: var(--muted);
+      }
+
+      .api-note {
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card);
+        font-size: 0.92rem;
+      }
+
+      code {
+        background: rgba(107, 114, 128, 0.18);
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Weighment Data Dashboard</h1>
+        <p>Incoming data from external systems is listed below.</p>
+      </div>
+
+      <div class="card">
+        {% if records|list %}
+        <table>
+          <thead>
+            <tr>
+              <th>CHA Agent</th>
+              <th>Material</th>
+              <th>Importer</th>
+              <th>Vessel No</th>
+              <th>Vehicle No</th>
+              <th>Tare</th>
+              <th>Gross</th>
+              <th>Net</th>
+              <th>Weighment Time</th>
+              <th>Received At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in records %}
+            <tr>
+              <td>{{ row.cha_agent_name }}</td>
+              <td>{{ row.material_name }}</td>
+              <td>{{ row.importer_name }}</td>
+              <td>{{ row.vessel_no }}</td>
+              <td>{{ row.vehicle_no }}</td>
+              <td>{{ row.tare_weight }}</td>
+              <td>{{ row.gross_weight }}</td>
+              <td>{{ row.net_weight }}</td>
+              <td>{{ row.weighment_datetime }}</td>
+              <td>{{ row.received_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">No data received yet.</div>
+        {% endif %}
+      </div>
+
+      <div class="api-note">
+        POST payload to <code>/api/weighment</code> with JSON content.
+      </div>
+    </div>
+  </body>
+</html>
