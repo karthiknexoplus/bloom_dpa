@@ -18,6 +18,9 @@ body {
   background: var(--theme-bg-body);
   color: var(--theme-text-primary);
   font-family: Inter, "Segoe UI", Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .navbar-custom {
@@ -54,6 +57,41 @@ body {
   border-color: #e9ddff;
 }
 
+.nav-icon-link i {
+  color: var(--theme-primary-dark);
+  font-size: 0.8rem;
+}
+
+.fastag-title {
+  color: var(--theme-primary-dark);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.btn-theme {
+  background: var(--theme-primary);
+  color: #fff;
+  border: 1px solid var(--theme-primary);
+}
+
+.btn-theme:hover {
+  background: var(--theme-primary-dark);
+  color: #fff;
+  border-color: var(--theme-primary-dark);
+}
+
+.btn-theme-outline {
+  background: #fff;
+  color: var(--theme-primary-dark);
+  border: 1px solid #d7c8f0;
+}
+
+.btn-theme-outline:hover {
+  background: #f6f2ff;
+  color: var(--theme-primary-dark);
+  border-color: #c8b2ea;
+}
+
 .fastag-menu-label {
   font-size: 0.82rem;
   font-weight: 600;
@@ -61,6 +99,16 @@ body {
 
 .page-wrapper {
   padding: 1rem;
+  flex: 1;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 0.7rem 1rem;
+  background: #ffffff;
+  border-top: 1px solid #e8eaf0;
+  color: #6a7280;
+  font-size: 0.82rem;
 }
 
 .container {

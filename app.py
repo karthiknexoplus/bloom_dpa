@@ -182,7 +182,29 @@ def index():
         ORDER BY id DESC
         """
     ).fetchall()
-    return render_template("dashboard.html", records=rows, app_title=app.config["APP_TITLE"])
+    cgp_rows = db.execute(
+        """
+        SELECT id, cgp_no, vehicle_regd_no, status_name, operation_type, requesting_party_name, received_at
+        FROM cgp_receipts
+        ORDER BY id DESC
+        LIMIT 10
+        """
+    ).fetchall()
+    counts = db.execute(
+        """
+        SELECT
+          (SELECT COUNT(*) FROM weighments) AS weighment_count,
+          (SELECT COUNT(*) FROM cgp_receipts) AS cgp_count
+        """
+    ).fetchone()
+    return render_template(
+        "dashboard.html",
+        records=rows,
+        cgp_records=cgp_rows,
+        weighment_count=counts["weighment_count"],
+        cgp_count=counts["cgp_count"],
+        app_title=app.config["APP_TITLE"],
+    )
 
 
 @app.route("/incoming-requests", methods=["GET"])

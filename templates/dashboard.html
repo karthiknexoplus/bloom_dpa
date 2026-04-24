@@ -13,12 +13,20 @@
 
   <div class="quick-grid">
     <a class="quick-action-card" href="{{ url_for('index') }}">
-      <div class="quick-action-title">Total Records</div>
-      <div class="quick-action-value">{{ records|length }}</div>
+      <div class="quick-action-title">Weighment Records</div>
+      <div class="quick-action-value">{{ weighment_count }}</div>
+    </a>
+    <a class="quick-action-card" href="{{ url_for('cgp_records') }}">
+      <div class="quick-action-title">CGP Records</div>
+      <div class="quick-action-value">{{ cgp_count }}</div>
     </a>
     <a class="quick-action-card" href="#api-help">
       <div class="quick-action-title">Endpoint</div>
       <div class="quick-action-value">/api/weighment</div>
+    </a>
+    <a class="quick-action-card" href="#api-help">
+      <div class="quick-action-title">CGP Endpoint</div>
+      <div class="quick-action-value">/ebs/cgp</div>
     </a>
   </div>
 
@@ -65,8 +73,48 @@
     </table>
   </div>
 
+  <div class="card shadow-sm border-0 mt-3">
+    <div class="card-body">
+      <h5 class="mb-3 fastag-title"><i class="fas fa-file-invoice me-2"></i>Recent CGP Records</h5>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle" style="font-size: 0.9rem;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>CGP No</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+              <th>Operation</th>
+              <th>Requesting Party</th>
+              <th>Received At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if cgp_records %}
+            {% for row in cgp_records %}
+            <tr>
+              <td>{{ row.id }}</td>
+              <td>{{ row.cgp_no or "-" }}</td>
+              <td>{{ row.vehicle_regd_no or "-" }}</td>
+              <td>{{ row.status_name or "-" }}</td>
+              <td>{{ row.operation_type or "-" }}</td>
+              <td>{{ row.requesting_party_name or "-" }}</td>
+              <td>{{ row.received_at }}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="7" class="empty-row">No CGP data received yet.</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="api-note" id="api-help">
-    <strong>POST endpoint:</strong> <code>/api/weighment</code>
+    <strong>POST endpoints:</strong> <code>/api/weighment</code> and <code>/ebs/cgp</code>
   </div>
 </section>
 {% endblock %}
