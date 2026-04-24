@@ -479,6 +479,7 @@ def get_vehicle_data():
     vehicle_no = (payload.get("vehicle_no") or payload.get("vehicle_number") or "").strip()
     if not vehicle_no:
         return jsonify({"error": "vehicle_no is required"}), 400
+    include_history = bool(payload.get("include_history", False))
 
     weighment_rows = db.execute(
         """
@@ -513,17 +514,31 @@ def get_vehicle_data():
         (f"%{vehicle_no}%",),
     ).fetchall()
 
+    weighment_data = [dict(row) for row in weighment_rows]
+    cgp_data = [dict(row) for row in cgp_rows]
+    incoming_data = [dict(row) for row in incoming_rows]
+
+    latest_weighment = weighment_data[0] if weighment_data else None
+    latest_cgp = cgp_data[0] if cgp_data else None
+    latest_incoming = incoming_data[0] if incoming_data else None
+
     return jsonify(
         {
             "vehicle_no": vehicle_no,
+            "latest_only": not include_history,
             "summary": {
                 "weighment_count": len(weighment_rows),
                 "cgp_count": len(cgp_rows),
                 "incoming_request_count": len(incoming_rows),
             },
-            "weighments": [dict(row) for row in weighment_rows],
-            "cgp_records": [dict(row) for row in cgp_rows],
-            "incoming_requests": [dict(row) for row in incoming_rows],
+            "latest": {
+                "weighment": latest_weighment,
+                "cgp_record": latest_cgp,
+                "incoming_request": latest_incoming,
+            },
+            "weighments": weighment_data if include_history else ([latest_weighment] if latest_weighment else []),
+            "cgp_records": cgp_data if include_history else ([latest_cgp] if latest_cgp else []),
+            "incoming_requests": incoming_data if include_history else ([latest_incoming] if latest_incoming else []),
         }
     ), 200
 
