@@ -44,7 +44,7 @@
         </div>
         <div class="col-md-3 d-flex gap-2">
           <button type="submit" class="btn btn-theme rounded-pill px-3 w-100">
-            <i class="fas fa-search me-1"></i>Apply
+            <i class="fas fa-filter me-1"></i>Apply
           </button>
           <a class="btn btn-theme-outline rounded-pill px-3 w-100" href="{{ url_for('incoming_requests') }}">
             <i class="fas fa-rotate-left me-1"></i>Clear
@@ -75,7 +75,7 @@
         {% for row in records %}
         <tr>
           <td>{{ row.id }}</td>
-          <td>{{ row.created_at }}</td>
+          <td>{{ row.created_at | to_ist }}</td>
           <td>{{ row.endpoint }}</td>
           <td>{{ row.method }}</td>
           <td>{{ row.status }}</td>

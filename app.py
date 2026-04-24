@@ -5,6 +5,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 
 from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_file, session, url_for
 
@@ -15,6 +16,7 @@ app.config["APP_TITLE"] = "Bloom Weighment"
 app.config["APP_USER"] = os.getenv("APP_USER", "admin")
 app.config["APP_PASSWORD"] = os.getenv("APP_PASSWORD", "admin123")
 app.config["LOGIN_BG_PATH"] = str(Path(__file__).resolve().parent / "csm_harbour-intercom-header_188d0b7581.png")
+IST_TZ = ZoneInfo("Asia/Kolkata")
 
 REQUIRED_FIELDS = [
     "cha_agent_name",
@@ -120,6 +122,32 @@ def login_required(view):
         return view(*args, **kwargs)
 
     return wrapped_view
+
+
+@app.template_filter("to_ist")
+def to_ist(value: Any) -> str:
+    if not value:
+        return "-"
+
+    dt: datetime | None = None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        text = str(value).strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(text)
+        except ValueError:
+            dt = None
+
+    if dt is None:
+        return str(value)
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    dt = dt.astimezone(IST_TZ)
+    return dt.strftime("%d-%m-%Y %I:%M:%S %p IST")
 
 
 def parse_pagination() -> tuple[int, int]:
@@ -442,6 +470,62 @@ def receive_cgp():
     db.commit()
 
     return jsonify({"message": "CGP payload received successfully", "received_at": received_at}), 201
+
+
+@app.route("/api/vehicle-data", methods=["POST"])
+def get_vehicle_data():
+    db = get_db()
+    payload = request.get_json(silent=True) or {}
+    vehicle_no = (payload.get("vehicle_no") or payload.get("vehicle_number") or "").strip()
+    if not vehicle_no:
+        return jsonify({"error": "vehicle_no is required"}), 400
+
+    weighment_rows = db.execute(
+        """
+        SELECT id, cha_agent_name, material_name, importer_name, vessel_no, vehicle_no,
+               tare_weight, gross_weight, net_weight, weighment_datetime, received_at
+        FROM weighments
+        WHERE UPPER(vehicle_no) = UPPER(?)
+        ORDER BY id DESC
+        """,
+        (vehicle_no,),
+    ).fetchall()
+
+    cgp_rows = db.execute(
+        """
+        SELECT id, cgp_no, vehicle_regd_no, status_name, operation_type, requesting_party_name,
+               cgp_approved_dt, received_at, payload_raw
+        FROM cgp_receipts
+        WHERE UPPER(vehicle_regd_no) = UPPER(?)
+        ORDER BY id DESC
+        """,
+        (vehicle_no,),
+    ).fetchall()
+
+    incoming_rows = db.execute(
+        """
+        SELECT id, endpoint, method, status, error_message, created_at, payload_raw
+        FROM incoming_requests
+        WHERE payload_raw LIKE ?
+        ORDER BY id DESC
+        LIMIT 200
+        """,
+        (f"%{vehicle_no}%",),
+    ).fetchall()
+
+    return jsonify(
+        {
+            "vehicle_no": vehicle_no,
+            "summary": {
+                "weighment_count": len(weighment_rows),
+                "cgp_count": len(cgp_rows),
+                "incoming_request_count": len(incoming_rows),
+            },
+            "weighments": [dict(row) for row in weighment_rows],
+            "cgp_records": [dict(row) for row in cgp_rows],
+            "incoming_requests": [dict(row) for row in incoming_rows],
+        }
+    ), 200
 
 
 if __name__ == "__main__":
